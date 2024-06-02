@@ -1,6 +1,8 @@
 defmodule Bot.DatingProfileFsm do
   use GenStateMachine
+  alias ElixirSense.Log
   alias Bot.StateFsm
+  require Logger
 
   def start_link(name) do
     GenStateMachine.start_link(__MODULE__, %{}, name: via_tuple(name))
@@ -10,30 +12,44 @@ defmodule Bot.DatingProfileFsm do
     {:ok, :wait_name, StateFsm.new()}
   end
 
-  def handle_event({:call, from}, {:name, name}, :wait_name, _state) do
-    state = %StateFsm{name: name}
-    {:next_state, :wait_age, state, [{:reply, from, :ok}]}
+  def handle_event({:call, from}, {:name, name}, :wait_name, state) do
+    Logger.debug("state_nam: #{inspect(state)}")
+    Log
+    new_state = StateFsm.save_profile(state, {:name, name})
+    Logger.debug("new_state_wait_name: #{inspect(new_state)}")
+    {:next_state, :wait_age, new_state, [{:reply, from, {:ok, new_state}}]}
   end
 
   def handle_event({:call, from}, {:age, age}, :wait_age, state) do
-    {:next_state, :wait_gender, StateFsm.save_profile(state, {:age, age}), {:reply, from, :ok}}
+    new_state = StateFsm.save_profile(state, {:age, age})
+    {:next_state, :wait_gender, new_state, {:reply, from, {:ok, new_state}}}
   end
 
   def handle_event({:call, from}, {:gender, gender}, :wait_gender, state) do
-    {:next_state, :wait_description, StateFsm.save_profile(state, {:gender, gender}), {:reply, from, :ok}}
+    new_state = StateFsm.save_profile(state, {:gender, gender})
+    Logger.debug("state: #{inspect(state)}")
+    Logger.debug("new_state: #{inspect(new_state)}")
+    {:next_state, :wait_description, new_state, {:reply, from, {:ok, new_state}}}
   end
 
   def handle_event({:call, from}, {:description, description}, :wait_description, state) do
-    {:next_state, :wait_photo, StateFsm.save_profile(state, {:description, description}), {:reply, from, :ok}}
+    new_state = StateFsm.save_profile(state, {:description, description})
+    Logger.debug("new_state: #{inspect(state)}")
+    {:next_state, :wait_photo, new_state, {:reply, from, {:ok, new_state}}}
   end
 
   def handle_event({:call, from}, {:photos, photos}, :wait_photo, state) do
-    state = StateFsm.save_profile(state, {:photos, photos})
-    {:next_state, :save_profile, state, {:reply, from, :ok}}
+    new_state = StateFsm.save_profile(state, {:photos, photos})
+    Logger.debug("new_state: #{inspect(new_state)}")
+    {:next_state, :save_profile, new_state, {:reply, from, new_state}}
   end
 
   def handle_event({:call, from}, :save_profile, :save_profile, state) do
     {:next_state, :exit, state, {:reply, from, {:ok, state}}}
+  end
+
+  def handle_event({:call, from}, :get_current_context, context, _state) do
+    {:keep_state, context, {:reply, from, {:current, context}}}
   end
 
   def handle_event({:call, from}, _event, context, state) do
@@ -55,6 +71,7 @@ defmodule Bot.DatingProfileFsm do
   end
 
   def name(pid, name) do
+    Logger.debug("name: #{inspect(name)}")
     GenStateMachine.call(via_tuple(pid), {:name, name})
   end
 
@@ -80,6 +97,10 @@ defmodule Bot.DatingProfileFsm do
 
   def get_full_state(pid) do
     GenStateMachine.call(via_tuple(pid), :save_profile)
+  end
+
+  def get_current_context(pid) do
+    GenStateMachine.call(via_tuple(pid), :get_current_context)
   end
 
   def via_tuple(name) do

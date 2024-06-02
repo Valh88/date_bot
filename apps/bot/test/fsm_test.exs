@@ -12,7 +12,7 @@ defmodule FsmTest do
   end
 
   test "testing fsm", _context do
-    state1 = %StateFsm{name: "test", age: 32, gender: "test", description: "test", photos: ["test"]}
+    state1 = %StateFsm{name: "test", age: 32, gender: "test", description: "Test", photos: ["test"]}
     DatingProfileFsm.name("test", "test")
     DatingProfileFsm.age("test", 32)
     DatingProfileFsm.gender("test", "test")

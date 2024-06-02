@@ -1,4 +1,6 @@
 defmodule Bot.StateFsm do
+  require Logger
+
   defstruct [:name, :age, :gender, :description, :photos]
 
   @type t :: %Bot.StateFsm{
@@ -13,25 +15,23 @@ defmodule Bot.StateFsm do
     %Bot.StateFsm{}
   end
 
-  def save_profile(state, {:name, name}) do
-    IO.inspect(name)
-    %Bot.StateFsm{state | name: name}
+  def save_profile(state, {key, value}) when is_struct(state, Bot.StateFsm) do
+    Logger.debug("Current state: #{inspect(state)}")
+    new_state =
+      case key do
+        :name -> %Bot.StateFsm{state | name: String.capitalize(value)}
+        :age -> %Bot.StateFsm{state | age: value}
+        :gender -> %Bot.StateFsm{state | gender: value}
+        :description -> %Bot.StateFsm{state | description: String.capitalize(value)}
+        :photos -> %Bot.StateFsm{state | photos: value}
+      end
+    Logger.debug("New state: #{inspect(new_state)}")
+    new_state
   end
 
-  def save_profile(state, {:age, age}) do
-    %Bot.StateFsm{state | age: age}
-  end
-
-  def save_profile(state, {:gender, gender}) do
-    %Bot.StateFsm{state | gender: gender}
-  end
-
-  def save_profile(state, {:description, description}) do
-    %Bot.StateFsm{state | description: description}
-  end
-
-  def save_profile(state, {:photos, photos}) do
-    # %Bot.StateFsm{state | photo: [photo | state.photo]}
-    %Bot.StateFsm{state | photos: photos}
+  def save_profile(state, {key, value}) do
+    Logger.debug("Current state: #{inspect(state)}")
+    Logger.debug("Key: #{inspect(key)}")
+    Logger.debug("Value: #{inspect(value)}")
   end
 end
