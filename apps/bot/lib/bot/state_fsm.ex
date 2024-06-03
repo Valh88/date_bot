@@ -43,13 +43,15 @@ defmodule Bot.StateFsm do
   end
 
   def save_profile_in_db(state) do
-    {:ok, profile} = DatingProfiles.create_dating_profile(%{
-      user_id: state.user_id,
-      name: state.name,
-      age: state.age,
-      gender: state.gender,
-      description: state.description,
-    })
+    {:ok, profile} =
+      DatingProfiles.create_dating_profile(%{
+        user_id: state.user_id,
+        name: state.name,
+        age: state.age,
+        gender: state.gender,
+        description: state.description
+      })
+
     Enum.each(state.photos, fn photo ->
       Photos.save_photo(%{dating_profile_id: profile.id, photo: photo})
     end)
@@ -106,7 +108,7 @@ defmodule Bot.StateFsm do
   end
 
   def save_profiles(%Bot.StateFsm{} = state) do
-    profile = DatingProfiles.create_dating_profile(%{
+    DatingProfiles.create_dating_profile(%{
       user_id: state.user_id,
       name: state.name,
       age: state.age,

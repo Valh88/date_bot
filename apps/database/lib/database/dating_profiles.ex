@@ -15,9 +15,10 @@ defmodule Database.DatingProfiles do
 
   def get_dating_profile_by_user_id(user_id, :preload) do
     query =
-      from d in DatingProfile,
-      where: d.id == ^user_id,
-      preload: [:photos]
+      from(d in DatingProfile,
+        where: d.id == ^user_id,
+        preload: [:photos]
+      )
 
     Repo.one(query)
   end

@@ -12,7 +12,8 @@ defmodule Database.Photos do
   def get_all_photos(dating_profile_id) do
     query =
       from(p in Photo,
-        where: p.dating_profile_id == ^dating_profile_id
+        where: p.dating_profile_id == ^dating_profile_id,
+        select: p.photo
       )
 
     Repo.all(query)

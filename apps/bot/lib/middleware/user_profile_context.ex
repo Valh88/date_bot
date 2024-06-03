@@ -10,7 +10,7 @@ defmodule Middleware.UserProfileContext do
     {:ok, %{id: id}} = extract_user(update)
     user = Users.get_or_create_user(id)
     cnt = add_extra(cnt, :user, user)
-    
+
     unless user.dating_profile do
       DynamicSupervisor.start_child(user.id)
 
