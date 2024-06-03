@@ -1,64 +1,107 @@
 defmodule Bot.DatingProfileFsm do
   use GenStateMachine
-  alias ElixirSense.Log
   alias Bot.StateFsm
   require Logger
 
   def start_link(name) do
-    GenStateMachine.start_link(__MODULE__, %{}, name: via_tuple(name))
+    GenStateMachine.start_link(__MODULE__, %{user_id: name}, name: via_tuple(name))
   end
 
-  def init(_) do
-    {:ok, :wait_name, StateFsm.new()}
+  def init(%{user_id: user_id}) do
+    {:ok, :wait_name, StateFsm.new(user_id)}
   end
 
   def handle_event({:call, from}, {:name, name}, :wait_name, state) do
-    Logger.debug("state_nam: #{inspect(state)}")
-    Log
-    new_state = StateFsm.save_profile(state, {:name, name})
-    Logger.debug("new_state_wait_name: #{inspect(new_state)}")
-    {:next_state, :wait_age, new_state, [{:reply, from, {:ok, new_state}}]}
+    Logger.debug("name: #{inspect(state)}")
+
+    case StateFsm.save_profile(state, {:name, name}) do
+      %Bot.StateFsm{} = new_state ->
+        {:next_state, :wait_age, new_state, {:reply, from, {:ok, new_state}}}
+
+      {:error, error} ->
+        errors_return(state, from, error)
+
+      _ ->
+        errors_return(state, from, "Unexpected return type")
+    end
   end
 
   def handle_event({:call, from}, {:age, age}, :wait_age, state) do
-    new_state = StateFsm.save_profile(state, {:age, age})
-    {:next_state, :wait_gender, new_state, {:reply, from, {:ok, new_state}}}
+    case StateFsm.save_profile(state, {:age, age}) do
+      %Bot.StateFsm{} = new_state ->
+        IO.puts("new_state: #{inspect(new_state)}")
+        {:next_state, :wait_gender, new_state, {:reply, from, {:ok, new_state}}}
+
+      {:error, error} ->
+        errors_return(state, from, error)
+
+      _ ->
+        errors_return(state, from, "Unexpected return type")
+    end
   end
 
   def handle_event({:call, from}, {:gender, gender}, :wait_gender, state) do
-    new_state = StateFsm.save_profile(state, {:gender, gender})
-    Logger.debug("state: #{inspect(state)}")
-    Logger.debug("new_state: #{inspect(new_state)}")
-    {:next_state, :wait_description, new_state, {:reply, from, {:ok, new_state}}}
+    case StateFsm.save_profile(state, {:gender, gender}) do
+      %Bot.StateFsm{} = new_state ->
+        {:next_state, :wait_description, new_state, {:reply, from, {:ok, new_state}}}
+
+      {:error, error} ->
+        errors_return(state, from, error)
+
+      _ ->
+        errors_return(state, from, "Unexpected return type")
+    end
   end
 
   def handle_event({:call, from}, {:description, description}, :wait_description, state) do
-    new_state = StateFsm.save_profile(state, {:description, description})
-    Logger.debug("new_state: #{inspect(state)}")
-    {:next_state, :wait_photo, new_state, {:reply, from, {:ok, new_state}}}
+    case StateFsm.save_profile(state, {:description, description}) do
+      %Bot.StateFsm{} = new_state ->
+        {:next_state, :wait_photos, new_state, {:reply, from, {:ok, new_state}}}
+
+      {:error, error} ->
+        errors_return(state, from, error)
+
+      _ ->
+        errors_return(state, from, "Unexpected return type")
+    end
   end
 
-  def handle_event({:call, from}, {:photos, photos}, :wait_photo, state) do
-    new_state = StateFsm.save_profile(state, {:photos, photos})
-    Logger.debug("new_state: #{inspect(new_state)}")
-    {:next_state, :save_profile, new_state, {:reply, from, new_state}}
+  def handle_event({:call, from}, {:photos, photos}, :wait_photos, state) do
+    case StateFsm.save_profile(state, {:photos, photos}) do
+      %Bot.StateFsm{} = new_state ->
+        if length(new_state.photos) == StateFsm.valid_photos() do
+          {:next_state, :save_profile, new_state, {:reply, from, {:ok, new_state}}}
+        else
+          {:next_state, :wait_photos, new_state, {:reply, from, {:ok, new_state}}}
+        end
+
+      {:error, error} ->
+        errors_return(state, from, error)
+
+      _ ->
+        errors_return(state, from, "Unexpected return type")
+    end
   end
 
-  def handle_event({:call, from}, :save_profile, :save_profile, state) do
-    {:next_state, :exit, state, {:reply, from, {:ok, state}}}
+  def handle_event({:call, _from}, :save_profile, :save_profile, state) do
+    StateFsm.save_profile_in_db(state)
+    send(self(), :shutdown)
+    {:stop, :shutdown, state}
   end
 
-  def handle_event({:call, from}, :get_current_context, context, _state) do
-    {:keep_state, context, {:reply, from, {:current, context}}}
+  def handle_event({:call, from}, :get_current_context, context, state) do
+    Logger.debug("context: #{inspect(context)}")
+    Logger.debug("state: #{inspect(state)}")
+    {:keep_state, state, {:reply, from, {:current, context}}}
   end
 
   def handle_event({:call, from}, _event, context, state) do
     {:keep_state, state, {:reply, from, {:error, {:next_state, context}}}}
   end
 
-  def handle_info({:shutdown_message, msg}, state) do
-    IO.puts(msg)
-    {:stop, :normal, state}
+  def handle_info(:shutdown, state) do
+    GenStateMachine.stop(self(), :shutdown, 5000)
+    {:stop, :shutdown, state}
   end
 
   def terminate(_reason, _state, _data) do
@@ -67,7 +110,11 @@ defmodule Bot.DatingProfileFsm do
   end
 
   def stop(pid) do
-    GenStateMachine.stop(via_tuple(pid), :shutdown)
+    GenStateMachine.stop(pid, :shutdown, 5000)
+  end
+
+  def errors_return(state, from, error \\ "Unexpected return type") do
+    {:keep_state, state, {:reply, from, {:error, error}}}
   end
 
   def name(pid, name) do
@@ -95,7 +142,7 @@ defmodule Bot.DatingProfileFsm do
     GenStateMachine.call(via_tuple(pid), {:photo, photo})
   end
 
-  def get_full_state(pid) do
+  def save_full_state(pid) do
     GenStateMachine.call(via_tuple(pid), :save_profile)
   end
 
@@ -103,7 +150,7 @@ defmodule Bot.DatingProfileFsm do
     GenStateMachine.call(via_tuple(pid), :get_current_context)
   end
 
-  def via_tuple(name) do
+  defp via_tuple(name) do
     {:via, Registry, {Bot.Registry, name}}
   end
 end

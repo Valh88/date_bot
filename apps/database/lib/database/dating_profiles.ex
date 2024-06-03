@@ -1,4 +1,5 @@
 defmodule Database.DatingProfiles do
+  import Ecto.Query
   alias Database.Repo
   alias Database.Profiles.DatingProfile
 
@@ -9,6 +10,15 @@ defmodule Database.DatingProfiles do
   end
 
   def get_dating_profile_by_user_id(user_id) do
-    Repo.get_by(DatingProfile, user_id: user_id)
+    Repo.get_by(DatingProfile, id: user_id)
+  end
+
+  def get_dating_profile_by_user_id(user_id, :preload) do
+    query =
+      from d in DatingProfile,
+      where: d.id == ^user_id,
+      preload: [:photos]
+
+    Repo.one(query)
   end
 end

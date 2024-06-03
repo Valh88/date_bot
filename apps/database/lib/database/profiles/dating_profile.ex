@@ -1,15 +1,17 @@
 defmodule Database.Profiles.DatingProfile do
   use Ecto.Schema
   import Ecto.Changeset
+  alias Database.Profiles.Photo
+  alias Database.Users.User
 
   schema "dating_profiles" do
     field(:name, :string)
     field(:age, :integer)
     field(:gender, :string)
-    # field(:city, :string)
     field(:description, :string)
     # field :photos, {:array, :string} todo
     belongs_to(:user, User)
+    has_many(:photos, Photo)
 
     timestamps()
   end

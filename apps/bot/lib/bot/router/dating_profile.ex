@@ -7,7 +7,7 @@ defmodule Bot.Router.DatingProfile do
 
   def check_gender(gender) do
     case String.downcase(gender) do
-      "male"  -> "Male"
+      "male" -> "Male"
       "female" -> "Female"
       _ -> nil
     end

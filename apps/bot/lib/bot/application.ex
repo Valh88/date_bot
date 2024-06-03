@@ -8,7 +8,15 @@ defmodule Bot.Application do
   @impl true
   def start(_type, _args) do
     token = ExGram.Config.get(:ex_gram, :token)
-    :ets.new(:dates_cache, [:named_table, :set, :public, read_concurrency: true, write_concurrency: true])
+
+    :ets.new(:dates_cache, [
+      :named_table,
+      :set,
+      :public,
+      read_concurrency: true,
+      write_concurrency: true
+    ])
+
     children = [
       # Starts a worker by calling: Bot.Worker.start_link(arg)
       # {Bot.Worker, arg}
