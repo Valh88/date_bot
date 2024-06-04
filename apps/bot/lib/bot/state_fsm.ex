@@ -96,14 +96,11 @@ defmodule Bot.StateFsm do
   end
 
   defp valid_photos(state, photos) do
-    Logger.debug("photos: #{inspect(photos)}")
-    Logger.debug("state: #{inspect(state)}")
-    Logger.debug("state.photos: #{inspect(state.photos)}")
-
-    try do
-      %Bot.StateFsm{state | photos: [photos | state.photos]}
-    rescue
-      _ -> {:error, "photo in list must be a string"}
+    case photos do
+      photo when is_binary(photo) ->
+        %Bot.StateFsm{state | photos: [photo | state.photos]}
+      _ ->
+        {:error, "photo in list must be a string"}
     end
   end
 
