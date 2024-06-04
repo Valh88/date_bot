@@ -3,7 +3,6 @@ defmodule Bot.Bot do
   use ExGram.Bot, name: @bot, setup_commands: true
   require Logger
   alias ExGram.Cnt
-  alias Bot.DatingProfileFsm
   alias Bot.Router.Start
   alias Bot.Router.DatingProfile
   alias Bot.Router.Lexicon
@@ -15,38 +14,40 @@ defmodule Bot.Bot do
 
   middleware(Middleware.UserProfileContext)
 
-  def handle({:command, :start, msg}, %Cnt{extra: %{user: user}} = context) do
-    if user.dating_profile do
-      IO.inspect(user.dating_profile)
+  @callback_profile_list [
+    "restart_dating_profile",
+    "change_photo",
+    "change_description",
+    "delete_dating_profile",
+    "edit_dating_profile",
+    "cancel_profile"
+  ]
 
-      Start.send_photo_group_with_caption(
-        msg.chat.id,
-        Database.Photos.get_all_photos(user.dating_profile.id),
-        user.dating_profile
-      )
-
-      Start.send_inline_keyboard(context)
-    else
-      answer(
-        context,
-        Lexicon.hello()
-      )
+  defmacro data_in_callback_query?(data) do
+    quote do
+      # todo
+      unquote(data) in unquote(@callback_profile_list)
     end
   end
 
-  def handle({:command, :profile, _msg}, %Cnt{extra: %{user: user}} = context) do
-    IO.inspect(user.dating_profile)
-
+  def handle({:command, :start, msg}, %Cnt{extra: %{user: user}} = context) do
     if user.dating_profile do
-      answer(context, "profile")
+      Start.start(context, msg.chat.id, user)
+    else
+      answer(context, Lexicon.hello())
+    end
+  end
+
+  def handle({:command, :profile, msg}, %Cnt{extra: %{user: user}} = context) do
+    if user.dating_profile do
+      DatingProfile.profile(context, msg.chat.id, user)
     else
       answer(context, Lexicon.enter_name())
     end
   end
 
   def handle({:text, text, _msg}, %Cnt{extra: %{user: user}} = context) do
-    Logger.debug("text: #{inspect(text)}")
-    DatingProfile.stat_fsm_create_profile(context, user.id, text)
+    DatingProfile.start_fsm_create_profile(context, user.id, text)
   end
 
   def handle(
@@ -54,13 +55,15 @@ defmodule Bot.Bot do
         %Cnt{extra: %{user: user}} = context
       )
       when not is_nil(group_id) and not is_nil(photo) do
-    case DatingProfileFsm.get_current_context(user.id) do
-      {:current, :wait_photos} ->
-        DatingProfile.save_photos(context, user.id, hd(photo).file_id)
+    DatingProfile.handle_save_photo(context, user.id, hd(photo).file_id)
+  end
 
-      _ ->
-        Logger.debug("state: #{inspect(DatingProfileFsm.get_current_context(user.id))}")
-    end
+  def handle(
+        {:message, %ExGram.Model.Message{media_group_id: _group_id, photo: photo}},
+        %Cnt{extra: %{user: user}} = context
+      )
+      when not is_nil(photo) do
+    DatingProfile.error_save_photo(context, user.id)
   end
 
   def handle(
@@ -70,6 +73,14 @@ defmodule Bot.Bot do
       when data == "male" or data == "female" do
     ExGram.answer_callback_query(callback_id)
     DatingProfile.save_gender(context, user.id, data)
+  end
+
+  def handle(
+        {:callback_query, %{id: callback_id, data: data}},
+        %Cnt{extra: %{user: _user}} = context
+      )
+      when data_in_callback_query?(data) do
+    DatingProfile.hendle_callback_query_by_profile_menu(context, callback_id, data)
   end
 
   def handle(:callback_query, %{id: callback_id}, %Cnt{extra: %{user: _user}} = _context) do
