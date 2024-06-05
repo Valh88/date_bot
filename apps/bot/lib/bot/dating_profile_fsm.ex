@@ -3,12 +3,59 @@ defmodule Bot.DatingProfileFsm do
   alias Bot.StateFsm
   require Logger
 
-  def start_link(name) do
-    GenStateMachine.start_link(__MODULE__, %{user_id: name}, name: via_tuple(name))
+  def start_link(data) do
+    case data do
+      {user_id, :update} ->
+        GenStateMachine.start_link(__MODULE__, {user_id, :update}, name: via_tuple(user_id))
+
+      {user_id, :create} ->
+        GenStateMachine.start_link(__MODULE__, {user_id, :create}, name: via_tuple(user_id))
+    end
   end
 
-  def init(%{user_id: user_id}) do
-    {:ok, :wait_name, StateFsm.new(user_id)}
+  def init({user_id, create_or_update}) do
+    case create_or_update do
+      :create -> {:ok, :wait_name, StateFsm.new(user_id)}
+      :update -> {:ok, :update, StateFsm.state_from_db(user_id)}
+      _ -> raise "create_or update  must be :create or :update"
+    end
+  end
+
+  def handle_event({:call, from}, {:description, name}, :update, state) do
+    case StateFsm.update_state_in_db(state.user_id, %{description: name}) do
+      {:ok, _} ->
+        next_state(:update, state, from)
+
+      {:error, _error} ->
+        errors_return(state, from, "errors enter name")
+    end
+  end
+
+  def handle_event({:call, from}, {:photos, photos}, :update, state) do
+    case StateFsm.update_photos_profile(state, photos) do
+      %Bot.StateFsm{} = new_state ->
+        next_state(:update, new_state, from)
+
+      {:error, error} ->
+        errors_return(state, from, error)
+    end
+  end
+
+  def handle_event(:cast, {:delete, pid}, :update, state) do
+    case StateFsm.delete_profile_in_db(pid) do
+      :ok ->
+        send(self(), :shutdown)
+
+      # {:stop, :shutdown, state}
+      {:error, error} ->
+        Logger.error(error)
+    end
+
+    {:stop, :shutdown, state}
+  end
+
+  def handle_event({:call, from}, :sleep, :sleep, state) do
+    next_state(:sleep, state, from)
   end
 
   def handle_event({:call, from}, {:name, name}, :wait_name, state) do
@@ -126,7 +173,7 @@ defmodule Bot.DatingProfileFsm do
     GenStateMachine.call(via_tuple(pid), {:description, description})
   end
 
-  def photo(pid, photo) do
+  def update_photo(pid, photo) do
     GenStateMachine.call(via_tuple(pid), {:photo, photo})
   end
 
@@ -136,6 +183,10 @@ defmodule Bot.DatingProfileFsm do
 
   def get_current_context(pid) do
     GenStateMachine.call(via_tuple(pid), :get_current_context)
+  end
+
+  def delete_profile(pid) do
+    GenStateMachine.cast(via_tuple(pid), {:delete, pid})
   end
 
   defp via_tuple(name) do

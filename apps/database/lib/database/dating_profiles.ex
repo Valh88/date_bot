@@ -10,7 +10,7 @@ defmodule Database.DatingProfiles do
   end
 
   def get_dating_profile_by_user_id(user_id) do
-    Repo.get_by(DatingProfile, id: user_id)
+    Repo.get_by(DatingProfile, user_id: user_id)
   end
 
   def get_dating_profile_by_user_id(user_id, :preload) do
@@ -21,5 +21,16 @@ defmodule Database.DatingProfiles do
       )
 
     Repo.one(query)
+  end
+
+  def update_dating_profile(user_id, attrs) do
+    get_dating_profile_by_user_id(user_id)
+    |> DatingProfile.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_dating_profile(profile) do
+    profile
+    |> Repo.delete()
   end
 end

@@ -12,7 +12,7 @@ defmodule Middleware.UserProfileContext do
     cnt = add_extra(cnt, :user, user)
 
     unless user.dating_profile do
-      DynamicSupervisor.start_child(user.id)
+      DynamicSupervisor.start_child({user.id, :create})
 
       case update do
         %{message: %{text: "/profile"}} ->

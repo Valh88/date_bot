@@ -25,7 +25,6 @@ defmodule Bot.Bot do
 
   defmacro data_in_callback_query?(data) do
     quote do
-      # todo
       unquote(data) in unquote(@callback_profile_list)
     end
   end
@@ -51,6 +50,14 @@ defmodule Bot.Bot do
   end
 
   def handle(
+        {:message, %ExGram.Model.Message{media_group_id: nil, photo: photo}},
+        %Cnt{extra: %{user: user}} = context
+      )
+      when not is_nil(photo) do
+    DatingProfile.error_save_photo(context, user.id)
+  end
+
+  def handle(
         {:message, %ExGram.Model.Message{media_group_id: group_id, photo: photo}},
         %Cnt{extra: %{user: user}} = context
       )
@@ -59,11 +66,12 @@ defmodule Bot.Bot do
   end
 
   def handle(
-        {:message, %ExGram.Model.Message{media_group_id: _group_id, photo: photo}},
-        %Cnt{extra: %{user: user}} = context
+        {:callback_query, %{id: callback_id, data: data}},
+        %Cnt{extra: %{user: _user}} = _context
       )
-      when not is_nil(photo) do
-    DatingProfile.error_save_photo(context, user.id)
+      when data == "show_dating_profiles" do
+    # todo: add logic
+    ExGram.answer_callback_query(callback_id)
   end
 
   def handle(
@@ -77,10 +85,16 @@ defmodule Bot.Bot do
 
   def handle(
         {:callback_query, %{id: callback_id, data: data}},
-        %Cnt{extra: %{user: _user}} = context
+        %Cnt{extra: %{user: user}} = context
       )
       when data_in_callback_query?(data) do
-    DatingProfile.hendle_callback_query_by_profile_menu(context, callback_id, data)
+    ExGram.answer_callback_query(callback_id)
+
+    if user.dating_profile do
+      DatingProfile.hendle_callback_query_by_profile_menu(context, user.id, data)
+    else
+      edit(context, :inline, Lexicon.hello())
+    end
   end
 
   def handle(:callback_query, %{id: callback_id}, %Cnt{extra: %{user: _user}} = _context) do

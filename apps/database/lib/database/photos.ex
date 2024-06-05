@@ -18,4 +18,24 @@ defmodule Database.Photos do
 
     Repo.all(query)
   end
+
+  def delete_all_photos(profile_id) do
+    query =
+      from(p in Photo,
+        where: p.dating_profile_id == ^profile_id
+      )
+    Repo.delete_all(query)
+  end
+
+  def update_photo(dating_profile_id, photo) do
+    %Photo{}
+    |> Photo.changeset(%{dating_profile_id: dating_profile_id, photo: photo})
+    |> Repo.update()
+  end
+
+  def update_photos(dating_profile_id, photos) do
+    Enum.map(photos, fn photo ->
+      update_photo(dating_profile_id, photo)
+    end)
+  end
 end

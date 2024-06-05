@@ -46,8 +46,6 @@ defmodule Bot.Router.Start do
   end
 
   def start(context, message_id, user) do
-    IO.inspect(user.dating_profile)
-
     send_photo_group_with_caption(
       message_id,
       Photos.get_all_photos(user.dating_profile.id),

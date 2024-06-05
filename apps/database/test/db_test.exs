@@ -38,7 +38,6 @@ defmodule DbTest do
     assert user.telega_id == 321
 
     user = Users.get_user_by_telega_id(321, :preload)
-    IO.inspect(user)
     user = Users.get_by_id(user.id)
     assert user.telega_id == 321
   end
@@ -61,6 +60,5 @@ defmodule DbTest do
     [h | _] = photo
     assert h.photo == "Test"
     user1 = DatingProfiles.get_dating_profile_by_user_id(dating_profile.user_id, :preload)
-    IO.inspect(user1)
   end
 end

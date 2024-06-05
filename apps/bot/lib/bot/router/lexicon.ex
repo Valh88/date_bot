@@ -108,4 +108,16 @@ defmodule Bot.Router.Lexicon do
   def go_back do
     "👤 Вернуться назад"
   end
+
+  def just_message do
+    "👤 Просто сообщение"
+  end
+
+  def description_saved do
+    "👤 Описание сохранено"
+  end
+
+  def profile_be_deleted do
+    "👤 Профиль удален. Введите /profile чтобы создать новый."
+  end
 end
