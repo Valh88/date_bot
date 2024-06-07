@@ -1,4 +1,12 @@
 defmodule Bot.Router.Lexicon do
+  def hello(locale) when is_binary(locale) do
+    case locale do
+      "en" -> "👋 Welcome, my personal assistant in finding a partner for you! You don't have a profile yet, click /profile to create it!"
+      "ru" ->  hello()
+      _ -> hello()
+    end
+  end
+
   def hello do
     "👋 Привет, я твой личный помощник в поиске партнера для тебя! У тебя еще нет анкеты, нажми /profile чтобы создать ее!"
   end

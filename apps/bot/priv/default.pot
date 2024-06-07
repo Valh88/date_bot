@@ -1,0 +1,9 @@
+msgid "test"
+msgstr "test message"
+
+msgid "welcome"
+msgstr "Welcome to the bot!"
+
+msgid "text"
+msgstr "Text"
+

@@ -33,6 +33,7 @@ defmodule Bot.Bot do
     if user.dating_profile do
       Start.start(context, msg.chat.id, user)
     else
+      #maybe need to add locale Lexicon.hello(Locale "ru", or "en") without gettext
       answer(context, Lexicon.hello())
     end
   end
