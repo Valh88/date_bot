@@ -34,7 +34,8 @@ defmodule Bot.MixProject do
       {:tesla, "~> 1.9"},
       {:hackney, "~> 1.20.1"},
       {:jason, ">= 1.0.0"},
-      {:gen_state_machine, "~> 3.0"}
+      {:gen_state_machine, "~> 3.0"},
+      {:gettext, "~> 0.24.0"}
     ]
   end
 end

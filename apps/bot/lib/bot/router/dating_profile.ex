@@ -16,7 +16,6 @@ defmodule Bot.Router.DatingProfile do
       {:current, :wait_gender} -> save_gender(context, user_id, text)
       {:current, :wait_description} -> save_description(context, user_id, text)
       {:current, :wait_photos} -> answer(context, Lexicon.need_save_photo_answer())
-      # {:current, :save_profile} -> answer(context, Lexicon.profile_be_saved())
       {:current, :update} -> update_description(context, user_id, text, :description)
       _ -> answer(context, Lexicon.just_message())
     end
