@@ -4,8 +4,8 @@ defmodule Database.Repo.Migrations.UserTable do
   def change do
     create table(:users, primary_key: true) do
       # add :id, :integer, primary_key: true
-      add :telega_id, :integer
-      
+      add :telega_id, :bigint
+
       timestamps()
     end
   end
